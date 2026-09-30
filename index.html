@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="6a97888e-site-verification" content="9e860b0b2e574fba417475ae567dc028" />
   <title>TeraBox Player</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -55,6 +56,29 @@
       display: flex;
       align-items: center;
       gap: 4px;
+    }
+
+    /* Ad Container under video */
+    #ad-box {
+      margin: 15px auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 250px;
+      background: #141414;
+      border-radius: 8px;
+      padding: 10px;
+      max-width: 320px;
+    }
+
+    .ad-label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
     }
 
     #loading {
@@ -118,9 +142,9 @@
       border: 1px solid #222;
       border-radius: 8px;
       padding: 8px 12px;
-      margin: 10px 16px;
+      margin: 10px 16px 20px;
       font-size: 11px;
-      color: #555;
+      color: #777;
       text-align: center;
     }
   </style>
@@ -150,7 +174,23 @@
       <span id="size-el"></span>
     </div>
   </div>
-  <div id="badge">🛡️ Ad-Free Player &nbsp;•&nbsp; TeraBox Bot</div>
+
+  <!-- Permanent Banner Ad (Adsterra 300x250) -->
+  <div id="ad-box">
+    <div class="ad-label">Advertisement</div>
+    <script type="text/javascript">
+      atOptions = {
+        'key' : 'd1bbf399e2fc66ea593e0d1a7d129019',
+        'format' : 'iframe',
+        'height' : 250,
+        'width' : 300,
+        'params' : {}
+      };
+    </script>
+    <script type="text/javascript" src="https://www.highrevenueformat.com/d1bbf399e2fc66ea593e0d1a7d129019/invoke.js"></script>
+  </div>
+
+  <div id="badge">⚡ TeraBox Fast Video Player</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
@@ -237,7 +277,7 @@
       video.src = streamUrl;
       video.addEventListener('loadedmetadata', () => { showPlayer(); video.play().catch(() => {}); });
       video.addEventListener('canplay', () => showPlayer());
-      video.addEventListener('error', () => {
+      video.addEventListener('error', (e) => {
         showError('Video play nahi hui. Link expire ho gayi ho sakti hai.');
       });
     }
