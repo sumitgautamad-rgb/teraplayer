@@ -11,7 +11,7 @@
     body {
       background: #0a0a0a;
       color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -22,6 +22,12 @@
       width: 100%;
       max-width: 900px;
       background: #111;
+    }
+
+    .video-container {
+      width: 100%;
+      position: relative;
+      background: #000;
     }
 
     video {
@@ -148,6 +154,8 @@
       text-align: center;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
 </head>
 <body>
 
@@ -167,7 +175,12 @@
 
 <!-- Player -->
 <div id="player-wrap" style="display:none">
-  <video id="video" controls playsinline autoplay></video>
+  <div class="video-container">
+    <video id="video" playsinline controls autoplay>
+      <source id="video-source" src="" type="application/x-mpegURL" />
+    </video>
+  </div>
+
   <div id="info">
     <div id="title">TeraBox Video</div>
     <div id="meta">
@@ -193,7 +206,6 @@
   <div id="badge">⚡ TeraBox Fast Video Player</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const streamUrl = params.get('v') || '';
@@ -201,11 +213,11 @@
   const size = params.get('size') || '';
 
   const loadingEl = document.getElementById('loading');
-  const loadingText = document.getElementById('loading-text');
   const playerWrap = document.getElementById('player-wrap');
   const errorScreen = document.getElementById('error-screen');
   const errorMsg = document.getElementById('error-msg');
   const video = document.getElementById('video');
+  const videoSource = document.getElementById('video-source');
   const titleEl = document.getElementById('title');
   const sizeEl = document.getElementById('size-el');
 
@@ -228,75 +240,51 @@
   if (!streamUrl) {
     showError('Stream URL nahi mila. Bot se dobara link request karein.');
   } else {
+    showPlayer();
+
     const isHLS = streamUrl.includes('.m3u8') || streamUrl.includes('fast_stream');
+    videoSource.src = streamUrl;
+    videoSource.type = isHLS ? 'application/x-mpegURL' : 'video/mp4';
 
-    if (isHLS && Hls.isSupported()) {
-      loadingText.textContent = 'HLS stream connect ho raha hai...';
-
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 60,
-        maxLoadingDelay: 20,
-        startLevel: -1,
-      });
-
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        loadingText.textContent = 'Ready! Play ho raha hai...';
-        showPlayer();
-        video.play().catch(() => {});
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              loadingText.textContent = 'Network error, retry kar raha hai...';
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              showError('Stream load nahi hui. Bot se dobara link mangein.');
-              break;
-          }
+    try {
+      fluidPlayer('video', {
+        layoutControls: {
+          controlBar: {
+            autoHide: true,
+            playbackRates: ['x2', 'x1.5', 'x1', 'x0.5']
+          },
+          fillToContainer: true,
+          autoPlay: true,
+          mute: false,
+          primaryColor: '#4a9eff'
+        },
+        vastOptions: {
+          adList: [
+            {
+              roll: 'preRoll',
+              vastTag: 'https://s.magsrv.com/v1/vast.php?idz=6044670',
+              adText: 'Advertisement',
+              adClickable: true
+            }
+          ],
+          skipButtonCaption: 'Skip in [seconds]s',
+          skipButtonClickCaption: 'Skip Ad ❯',
+          adText: 'Advertisement'
         }
       });
-
-    } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-      video.addEventListener('loadedmetadata', () => { showPlayer(); video.play().catch(() => {}); });
-      video.addEventListener('error', () => showError('Video load nahi hui.'));
-
-    } else {
-      loadingText.textContent = 'Video load ho raha hai...';
-      video.src = streamUrl;
-      video.addEventListener('loadedmetadata', () => { showPlayer(); video.play().catch(() => {}); });
-      video.addEventListener('canplay', () => showPlayer());
-      video.addEventListener('error', (e) => {
-        showError('Video play nahi hui. Link expire ho gayi ho sakti hai.');
-      });
+    } catch (e) {
+      console.warn('Fluid player fallback:', e);
+      if (isHLS && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      } else {
+        video.src = streamUrl;
+        video.play().catch(() => {});
+      }
     }
   }
-
-  document.addEventListener('keydown', (e) => {
-    switch(e.key) {
-      case ' ':
-      case 'k':
-        e.preventDefault();
-        video.paused ? video.play() : video.pause();
-        break;
-      case 'ArrowRight': video.currentTime += 10; break;
-      case 'ArrowLeft':  video.currentTime -= 10; break;
-      case 'ArrowUp':    video.volume = Math.min(1, video.volume + 0.1); break;
-      case 'ArrowDown':  video.volume = Math.max(0, video.volume - 0.1); break;
-      case 'f': if (video.requestFullscreen) video.requestFullscreen(); break;
-    }
-  });
 </script>
 </body>
 </html>
