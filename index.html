@@ -24,10 +24,12 @@
       background: #111;
     }
 
+    /* Video player container */
     .video-container {
       width: 100%;
       position: relative;
       background: #000;
+      min-height: 240px;
     }
 
     video {
@@ -35,6 +37,14 @@
       max-height: 60vh;
       background: #000;
       display: block;
+    }
+
+    iframe#player-frame {
+      width: 100%;
+      height: 480px;
+      border: none;
+      display: block;
+      background: #000;
     }
 
     #info {
@@ -64,6 +74,33 @@
       gap: 4px;
     }
 
+    .action-row {
+      display: flex;
+      gap: 10px;
+      padding: 10px 16px;
+      background: #141414;
+      justify-content: center;
+    }
+
+    .btn-action {
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-action:hover {
+      background: #1d4ed8;
+    }
+
+    /* Ad Container under video */
     #ad-box {
       margin: 15px auto;
       text-align: center;
@@ -153,7 +190,9 @@
       text-align: center;
     }
   </style>
+  <!-- Load HLS.js first so Fluid Player can use it -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <!-- Load Fluid Player for ExoClick VAST Video Ads -->
   <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
 </head>
 <body>
@@ -168,16 +207,19 @@
 <div id="error-screen">
   <div class="icon">⚠️</div>
   <h2>Video nahi chala</h2>
-  <p id="error-msg">Stream URL invalid ya expire ho gayi. Bot se dobara link request karein.</p>
+  <p id="error-msg">Link invalid ya expire ho gayi. Bot se dobara link bhej kar check karein.</p>
   <button class="retry-btn" onclick="location.reload()">🔄 Retry</button>
 </div>
 
-<!-- Player -->
+<!-- Player Wrap -->
 <div id="player-wrap" style="display:none">
-  <div class="video-container">
-    <video id="video" playsinline controls autoplay>
+  <div class="video-container" id="video-container">
+    <!-- Native Video (used when stream_url is present) -->
+    <video id="video" playsinline controls autoplay style="display:none">
       <source id="video-source" src="" type="application/x-mpegURL" />
     </video>
+    <!-- Web Player Iframe (used when direct stream needs web resolution) -->
+    <iframe id="player-frame" style="display:none" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>
   </div>
 
   <div id="info">
@@ -187,7 +229,13 @@
     </div>
   </div>
 
-  <!-- Adsterra Banner 300x250 -->
+  <div class="action-row" id="action-row" style="display:none">
+    <a id="external-link" class="btn-action" href="#" target="_blank" rel="noopener noreferrer">
+      🌐 Browser mein Fullscreen kholein
+    </a>
+  </div>
+
+  <!-- Permanent Banner Ad (Adsterra 300x250) -->
   <div id="ad-box">
     <div class="ad-label">Advertisement</div>
     <script type="text/javascript">
@@ -208,6 +256,7 @@
 <script>
   const params = new URLSearchParams(location.search);
   const streamUrl = params.get('v') || '';
+  const teraboxUrl = params.get('url') || '';
   const title = params.get('title') || 'TeraBox Video';
   const size = params.get('size') || '';
 
@@ -217,8 +266,11 @@
   const errorMsg = document.getElementById('error-msg');
   const video = document.getElementById('video');
   const videoSource = document.getElementById('video-source');
+  const playerFrame = document.getElementById('player-frame');
   const titleEl = document.getElementById('title');
   const sizeEl = document.getElementById('size-el');
+  const actionRow = document.getElementById('action-row');
+  const externalLink = document.getElementById('external-link');
 
   titleEl.textContent = decodeURIComponent(title);
   if (size) sizeEl.innerHTML = '📦 ' + decodeURIComponent(size);
@@ -236,10 +288,10 @@
     errorScreen.style.display = 'none';
   }
 
-  if (!streamUrl) {
-    showError('Stream URL nahi mila. Bot se dobara link request karein.');
-  } else {
+  if (streamUrl) {
+    // Mode 1: Direct stream URL available
     showPlayer();
+    video.style.display = 'block';
 
     const isHLS = streamUrl.includes('.m3u8') || streamUrl.includes('fast_stream');
     videoSource.src = streamUrl;
@@ -283,6 +335,16 @@
         video.play().catch(() => {});
       }
     }
+  } else if (teraboxUrl) {
+    // Mode 2: TeraBox share link fallback via online player iframe
+    showPlayer();
+    const targetPlayer = 'https://www.teraplayer.in/?url=' + encodeURIComponent(teraboxUrl);
+    playerFrame.src = targetPlayer;
+    playerFrame.style.display = 'block';
+    externalLink.href = targetPlayer;
+    actionRow.style.display = 'flex';
+  } else {
+    showError('Koi video link nahi mila. Bot se dobara TeraBox link bhejein.');
   }
 </script>
 
